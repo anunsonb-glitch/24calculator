@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>24 Solver</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0c0c0e;
+      --surface: #141418;
+      --surface2: #1c1c22;
+      --border: #2a2a35;
+      --accent: #4fff91;
+      --accent-rgb: 79,255,145;
+      --accent2: #47ffe8;
+      --text: #f0f0f8;
+      --muted: #55556a;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(var(--accent-rgb),0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--accent-rgb),0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 6rem;
+      line-height: 1;
+      color: var(--accent);
+      letter-spacing: 6px;
+      animation: glow 3s ease-in-out infinite alternate;
+      margin-bottom: 4px;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 30px rgba(var(--accent-rgb),0.2); }
+      to   { text-shadow: 0 0 70px rgba(var(--accent-rgb),0.5), 0 0 120px rgba(var(--accent-rgb),0.2); }
+    }
+
+    .subtitle {
+      font-family: 'DM Mono', monospace;
+      font-size: .75rem;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    .inputs-row {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .num-input {
+      width: 90px;
+      height: 100px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      text-align: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, color .2s;
+      -moz-appearance: textfield;
+    }
+    .num-input::-webkit-inner-spin-button,
+    .num-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .num-input:focus { border-color: var(--accent); color: var(--accent); }
+
+    .solve-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #0c0c0e;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 3px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      box-shadow: 0 0 24px rgba(var(--accent-rgb),0.15);
+    }
+    .solve-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 40px rgba(var(--accent-rgb),0.35);
+    }
+    .solve-btn:active { transform: scale(.98); }
+
+    .clear-btn {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: all .15s;
+    }
+    .clear-btn:hover { color: #ff4f4f; border-color: #ff4f4f; }
+
+    .random-btn {
+      padding: 7px 20px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: .75rem;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: all .15s;
+    }
+    .random-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    .paste-btn {
+      height: 44px;
+      padding: 0 14px;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .paste-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    #result { text-align: left; }
+
+    .result-header {
+      font-size: .65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    .solution-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      color: var(--accent2);
+      margin-bottom: 8px;
+      transition: border-color .15s, background .15s;
+      cursor: default;
+    }
+    .copy-btn {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .copy-btn.copied { color: var(--accent) !important; border-color: var(--accent) !important; }
+
+    .no-solution {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 24px;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.8;
+    }
+    .no-solution strong { color: var(--text); display: block; font-size: 1.1rem; margin-bottom: 6px; }
+
+    .mode-btn {
+      flex: 1;
+      padding: 9px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .mode-btn:hover { color: var(--text); border-color: var(--text); }
+    .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(var(--accent-rgb),.06); }
+
+    body.light {
+      --bg: #f0f0f0;
+      --surface: #ffffff;
+      --surface2: #e4e4e4;
+      --border: #cccccc;
+      --text: #1a1a1a;
+      --muted: #888888;
+    }
+
+    .settings-btn {
+      width: 44px;
+      height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: border-color .2s, transform .2s;
+      color: var(--muted);
+    }
+    .settings-btn:hover { border-color: var(--accent); color: var(--accent); transform: rotate(30deg); }
+    .settings-btn:hover.no-tilt { transform: none; }
+
+    /* SETTINGS PANEL */
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 300;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 76px 20px 0;
+      backdrop-filter: blur(4px);
+    }
+    .settings-overlay.open { display: flex; }
+
+    .settings-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 280px;
+      animation: slideDown .2s ease;
+    }
+    @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+
+    .settings-panel h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 2px;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .setting-group { margin-bottom: 20px; }
+    .setting-label {
+      font-size: .65rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+    .swatch {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform .15s, border-color .15s;
+    }
+    .swatch:hover { transform: scale(1.15); }
+    .swatch.active { border-color: var(--text); }
+
+    .music-tracks { display: flex; flex-direction: column; gap: 8px; }
+    .track-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .82rem;
+      font-weight: 600;
+      transition: all .15s;
+      text-align: left;
+    }
+    .track-btn:hover { border-color: var(--accent); color: var(--text); }
+    .track-btn.playing { border-color: var(--accent); color: var(--accent); background: rgba(var(--accent-rgb),.06); }
+    .track-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .vol-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .vol-label { font-size: .7rem; color: var(--muted); width: 16px; text-align: center; }
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    .toggle {
+      width: 42px; height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background .2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle-knob {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .2s;
+    }
+    .toggle.on .toggle-knob { transform: translateX(18px); }
+
+    .settings-close {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .82rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .settings-close:hover { color: var(--text); border-color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <!-- SETTINGS & RANDOM BUTTONS -->
+  <div style="position:fixed;top:20px;right:20px;z-index:400;display:flex;gap:8px;">
+    <button class="settings-btn no-tilt" onclick="randomNumbers()" title="Random numbers">🎲</button>
+    <button class="settings-btn" onclick="toggleSettings()" title="Settings">⚙️</button>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="settings-overlay" id="settings-overlay" onclick="overlayClick(event)">
+    <div class="settings-panel">
+      <h3>⚙ Settings</h3>
+
+      <div class="setting-group">
+        <div class="setting-label">Mode</div>
+        <div style="display:flex;gap:8px;">
+          <button class="mode-btn active" id="mode-dark" onclick="setMode('dark',this)">Dark</button>
+          <button class="mode-btn" id="mode-light" onclick="setMode('light',this)">Light</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">Theme Color</div>
+        <div class="color-swatches" id="swatches">
+          <div class="swatch active" style="background:#4fff91;" onclick="setColor('#4fff91','79,255,145',this)" title="Green"></div>
+          <div class="swatch" style="background:#4f8ef7;" onclick="setColor('#4f8ef7','79,142,247',this)" title="Blue"></div>
+          <div class="swatch" style="background:#e8ff47;" onclick="setColor('#e8ff47','232,255,71',this)" title="Yellow"></div>
+          <div class="swatch" style="background:#ff4f8e;" onclick="setColor('#ff4f8e','255,79,142',this)" title="Pink"></div>
+          <div class="swatch" style="background:#ff8c4f;" onclick="setColor('#ff8c4f','255,140,79',this)" title="Orange"></div>
+          <div class="swatch" style="background:#bf4fff;" onclick="setColor('#bf4fff','191,79,255',this)" title="Purple"></div>
+          <div class="swatch" style="background:#ff4f4f;" onclick="setColor('#ff4f4f','255,79,79',this)" title="Red"></div>
+          <div class="swatch" style="background:#f0f0f8;" onclick="setColor('#f0f0f8','240,240,248',this)" title="White"></div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">Music</div>
+        <div class="music-tracks">
+          <button class="track-btn" id="track-off" onclick="playTrack('off',this)"><span class="track-icon">🔇</span> Off</button>
+          <button class="track-btn" id="track-lofi" onclick="playTrack('lofi',this)"><span class="track-icon">🎵</span> No. 1</button>
+          <button class="track-btn" id="track-focus" onclick="playTrack('focus',this)"><span class="track-icon">🎵</span> No. 2</button>
+          <button class="track-btn" id="track-jazz" onclick="playTrack('jazz',this)"><span class="track-icon">🎵</span> No. 3</button>
+        </div>
+        <div class="vol-row">
+          <span class="vol-label">🔈</span>
+          <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.5" oninput="setVolume(this.value)"/>
+          <span class="vol-label">🔊</span>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">Solutions</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:.82rem;color:var(--muted);font-family:'DM Sans',sans-serif;">Show all solutions</span>
+          <div class="toggle" id="show-all-toggle" onclick="toggleShowAll(this)">
+            <div class="toggle-knob"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="settings-close" onclick="toggleSettings()">Close</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="logo">24</div>
+    <div class="subtitle">Solver — Enter 4 numbers</div>
+
+    <div style="display:flex;gap:14px;justify-content:center;align-items:center;margin-bottom:20px;">
+      <input class="num-input" id="n0" type="number" min="1" max="99" placeholder="?" />
+      <input class="num-input" id="n1" type="number" min="1" max="99" placeholder="?" />
+      <input class="num-input" id="n2" type="number" min="1" max="99" placeholder="?" />
+      <input class="num-input" id="n3" type="number" min="1" max="99" placeholder="?" />
+      <button class="paste-btn" onclick="pasteNumbers()" title="Paste numbers from clipboard">Paste</button>
+    </div>
+
+    <button class="solve-btn" onclick="solve()">SOLVE</button>
+    <button class="clear-btn" onclick="clearAll()">✕ Clear</button>
+
+    <!-- Hidden paste helper -->
+    <input id="paste-input-box" type="text" onpaste="handlePasteInput(event)" style="display:none;position:absolute;opacity:0;width:1px;height:1px;" />
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+  // ── SETTINGS ──────────────────────────────────────────────
+  let showAllSolutions = false;
+
+  function toggleShowAll(el){
+    showAllSolutions = !showAllSolutions;
+    el.classList.toggle('on', showAllSolutions);
+  }
+
+  function setMode(mode, btn){
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.body.classList.toggle('light', mode==='light');
+  }
+
+  function toggleSettings(){
+    document.getElementById('settings-overlay').classList.toggle('open');
+  }
+  function overlayClick(e){
+    if(e.target===document.getElementById('settings-overlay')) toggleSettings();
+  }
+
+  function setColor(hex, rgb, el){
+    document.documentElement.style.setProperty('--accent', hex);
+    document.documentElement.style.setProperty('--accent-rgb', rgb);
+    // Fix solve button text: use dark text on light colors, white on dark
+    const light=['#e8ff47','#4fff91','#f0f0f8'];
+    document.querySelector('.solve-btn').style.color = light.includes(hex) ? '#0c0c0e' : '#ffffff';
+    document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // ── MUSIC ─────────────────────────────────────────────────
+  let audioCtx = null;
+  let musicNodes = [];
+  let currentTrack = 'off';
+  let volume = 0.5;
+
+  function getAudioCtx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function stopMusic(){
+    musicNodes.forEach(n=>{ try{ n.stop(); }catch(e){} });
+    musicNodes=[];
+  }
+
+  function setVolume(val){
+    volume=parseFloat(val);
+    if(gainNode) gainNode.gain.value=volume;
+  }
+
+  let gainNode=null;
+
+  function playTrack(name, btn){
+    stopMusic();
+    document.querySelectorAll('.track-btn').forEach(b=>b.classList.remove('playing'));
+    currentTrack=name;
+    if(name==='off'){ btn.classList.add('playing'); return; }
+    btn.classList.add('playing');
+
+    const ctx=getAudioCtx();
+    gainNode=ctx.createGain();
+    gainNode.gain.value=volume;
+    gainNode.connect(ctx.destination);
+
+    if(name==='lofi') playLofi(ctx, gainNode);
+    else if(name==='focus') playFocus(ctx, gainNode);
+    else if(name==='jazz') playJazz(ctx, gainNode);
+  }
+
+  // Lo-Fi: gentle chord pads + soft kick
+  function playLofi(ctx, out){
+    const bpm=75, beat=60/bpm;
+    // Chord pads
+    const chords=[[261.63,329.63,392],[246.94,311.13,369.99],[220,277.18,329.63],[246.94,311.13,392]];
+    let t=ctx.currentTime;
+    function scheduleChords(){
+      chords.forEach((chord,ci)=>{
+        chord.forEach(freq=>{
+          const osc=ctx.createOscillator();
+          const env=ctx.createGain();
+          osc.type='sine';
+          osc.frequency.value=freq;
+          env.gain.setValueAtTime(0,t+ci*beat*2);
+          env.gain.linearRampToValueAtTime(0.06,t+ci*beat*2+0.1);
+          env.gain.linearRampToValueAtTime(0,t+ci*beat*2+beat*2-0.05);
+          osc.connect(env); env.connect(out);
+          osc.start(t+ci*beat*2); osc.stop(t+ci*beat*2+beat*2);
+          musicNodes.push(osc);
+        });
+      });
+      // Soft kick
+      for(let i=0;i<8;i++){
+        const k=ctx.createOscillator();
+        const ke=ctx.createGain();
+        k.frequency.setValueAtTime(120,t+i*beat);
+        k.frequency.exponentialRampToValueAtTime(40,t+i*beat+0.15);
+        ke.gain.setValueAtTime(0.15,t+i*beat);
+        ke.gain.exponentialRampToValueAtTime(0.001,t+i*beat+0.2);
+        k.connect(ke); ke.connect(out);
+        k.start(t+i*beat); k.stop(t+i*beat+0.2);
+        musicNodes.push(k);
+      }
+      t+=beat*8;
+      setTimeout(scheduleChords, (beat*6)*1000);
+    }
+    scheduleChords();
+  }
+
+  // Focus: rhythmic arpeggios
+  function playFocus(ctx, out){
+    const bpm=120, beat=60/bpm;
+    const notes=[261.63,329.63,392,523.25,392,329.63,261.63,220];
+    let t=ctx.currentTime;
+    function scheduleArp(){
+      notes.forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const env=ctx.createGain();
+        osc.type='square';
+        osc.frequency.value=freq;
+        env.gain.setValueAtTime(0,t+i*beat*0.5);
+        env.gain.linearRampToValueAtTime(0.04,t+i*beat*0.5+0.02);
+        env.gain.linearRampToValueAtTime(0,t+i*beat*0.5+beat*0.4);
+        osc.connect(env); env.connect(out);
+        osc.start(t+i*beat*0.5); osc.stop(t+i*beat*0.5+beat*0.5);
+        musicNodes.push(osc);
+      });
+      t+=beat*4;
+      setTimeout(scheduleArp,(beat*3)*1000);
+    }
+    scheduleArp();
+  }
+
+  // Jazz: swung walking bass + chords
+  function playJazz(ctx, out){
+    const bpm=100, beat=60/bpm;
+    const bass=[130.81,146.83,164.81,174.61,196,174.61,164.81,146.83];
+    let t=ctx.currentTime;
+    function scheduleJazz(){
+      bass.forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const env=ctx.createGain();
+        osc.type='triangle';
+        osc.frequency.value=freq;
+        const swing=i%2===1?beat*0.1:0;
+        env.gain.setValueAtTime(0.1,t+i*beat+swing);
+        env.gain.linearRampToValueAtTime(0,t+i*beat+swing+beat*0.8);
+        osc.connect(env); env.connect(out);
+        osc.start(t+i*beat+swing); osc.stop(t+i*beat+swing+beat);
+        musicNodes.push(osc);
+      });
+      // Chord stabs on beats 2 and 4
+      [1,3].forEach(bi=>{
+        [261.63,329.63,392,493.88].forEach(freq=>{
+          const osc=ctx.createOscillator();
+          const env=ctx.createGain();
+          osc.type='sine';
+          osc.frequency.value=freq;
+          env.gain.setValueAtTime(0.04,t+bi*beat);
+          env.gain.linearRampToValueAtTime(0,t+bi*beat+beat*0.3);
+          osc.connect(env); env.connect(out);
+          osc.start(t+bi*beat); osc.stop(t+bi*beat+beat*0.4);
+          musicNodes.push(osc);
+        });
+      });
+      t+=beat*8;
+      setTimeout(scheduleJazz,(beat*6)*1000);
+    }
+    scheduleJazz();
+  }
+
+  // Set off as default active
+  document.getElementById('track-off').classList.add('playing');
+
+  // ── SOLVER ────────────────────────────────────────────────
+  function permutations(arr){
+    if(arr.length<=1) return [arr];
+    const result=[];
+    arr.forEach((v,i)=>{
+      const rest=[...arr.slice(0,i),...arr.slice(i+1)];
+      permutations(rest).forEach(p=>result.push([v,...p]));
+    });
+    return result;
+  }
+
+  function canonicalize(expr){
+    function parseTokens(s){
+      const tokens=[];
+      let i=0;
+      while(i<s.length){
+        if(s[i]===' '){i++;continue;}
+        if(s[i]==='('){tokens.push('(');i++;}
+        else if(s[i]===')'){tokens.push(')');i++;}
+        else if('+-×÷'.includes(s[i])){tokens.push(s[i]);i++;}
+        else{
+          let n='';
+          while(i<s.length&&s[i]>='0'&&s[i]<='9'){n+=s[i++];}
+          tokens.push(n);
+        }
+      }
+      return tokens;
+    }
+    function parseExpr(tokens, pos){
+      if(tokens[pos]==='('){
+        pos++;
+        const [left, pos2]=parseExpr(tokens,pos);
+        const op=tokens[pos2];
+        const [right, pos3]=parseExpr(tokens,pos2+1);
+        return [{type:'op',op,left,right}, pos3+1];
+      } else {
+        return [{type:'num',val:tokens[pos]}, pos+1];
+      }
+    }
+    function normalize(node){
+      if(node.type==='num') return node;
+      const left=normalize(node.left);
+      const right=normalize(node.right);
+      const n={type:'op',op:node.op,left,right};
+      if(n.op==='+'||n.op==='×'){
+        const ls=serialize(left), rs=serialize(right);
+        if(ls>rs) return {type:'op',op:n.op,left:right,right:left};
+      }
+      return n;
+    }
+    function serialize(node){
+      if(node.type==='num') return node.val;
+      return `(${serialize(node.left)} ${node.op} ${serialize(node.right)})`;
+    }
+    try{
+      const tokens=parseTokens(expr);
+      const [tree]=parseExpr(tokens,0);
+      return serialize(normalize(tree));
+    }catch(e){ return expr; }
+  }
+
+  function findAllSolutions(nums){
+    const ops=['+','-','*','/'];
+    const seen=new Set();
+    const results=[];
+    for(const p of permutations(nums)){
+      for(const o1 of ops) for(const o2 of ops) for(const o3 of ops){
+        const exprs=[
+          [`((${p[0]}${o1}${p[1]})${o2}${p[2]})${o3}${p[3]}`, `((${p[0]} ${o1} ${p[1]}) ${o2} ${p[2]}) ${o3} ${p[3]}`],
+          [`(${p[0]}${o1}(${p[1]}${o2}${p[2]}))${o3}${p[3]}`, `(${p[0]} ${o1} (${p[1]} ${o2} ${p[2]})) ${o3} ${p[3]}`],
+          [`(${p[0]}${o1}${p[1]})${o2}(${p[2]}${o3}${p[3]})`, `(${p[0]} ${o1} ${p[1]}) ${o2} (${p[2]} ${o3} ${p[3]})`],
+          [`${p[0]}${o1}((${p[1]}${o2}${p[2]})${o3}${p[3]})`, `${p[0]} ${o1} ((${p[1]} ${o2} ${p[2]}) ${o3} ${p[3]})`],
+          [`${p[0]}${o1}(${p[1]}${o2}(${p[2]}${o3}${p[3]}))`, `${p[0]} ${o1} (${p[1]} ${o2} (${p[2]} ${o3} ${p[3]}))`],
+        ];
+        for(const [evalExpr, displayExpr] of exprs){
+          try{
+            const val=Function(`"use strict";return(${evalExpr})`)();
+            if(Math.abs(val-24)<1e-9){
+              const pretty=displayExpr.replace(/\*/g,'×').replace(/\//g,'÷');
+              const key=canonicalize(pretty);
+              if(!seen.has(key)){ seen.add(key); results.push(pretty); }
+            }
+          }catch(e){}
+        }
+      }
+    }
+    return results;
+  }
+
+  async function pasteNumbers(){
+    // Try clipboard API first
+    if(navigator.clipboard && navigator.clipboard.readText){
+      try {
+        const text = await navigator.clipboard.readText();
+        const nums = text.match(/\d+(\.\d+)?/g);
+        if(nums && nums.length >= 4){
+          ['n0','n1','n2','n3'].forEach((id,i) => document.getElementById(id).value = parseFloat(nums[i]));
+          showPasteFeedback('✓ Pasted!', true);
+          return;
+        }
+      } catch(e) {}
+    }
+    // Fallback: create a hidden input and focus it so user can paste
+    const box = document.getElementById('paste-input-box');
+    box.style.display = 'block';
+    box.value = '';
+    box.focus();
+    box.select();
+  }
+
+  function handlePasteInput(e){
+    setTimeout(()=>{
+      const text = e.target.value;
+      const nums = text.match(/\d+(\.\d+)?/g);
+      if(nums && nums.length >= 4){
+        ['n0','n1','n2','n3'].forEach((id,i) => document.getElementById(id).value = parseFloat(nums[i]));
+        showPasteFeedback('✓ Pasted!', true);
+      } else {
+        showPasteFeedback('✕ Need 4 numbers', false);
+      }
+      e.target.style.display = 'none';
+    }, 100);
+  }
+
+  function showPasteFeedback(msg, ok){
+    const btn = document.querySelector('.paste-btn');
+    const orig = btn.textContent;
+    btn.textContent = ok ? '✓ ' + msg : '✕ ' + msg;
+    btn.style.color = ok ? 'var(--accent)' : '#ff4f4f';
+    btn.style.borderColor = ok ? 'var(--accent)' : '#ff4f4f';
+    setTimeout(()=>{
+      btn.textContent = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 1500);
+  }
+
+  function copySolution(index){
+    const text = currentSolutions[index];
+    if(!text) return;
+    const btn = document.getElementById('copy-btn-'+index);
+    function onSuccess(){
+      btn.textContent = '✓';
+      btn.classList.add('copied');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1500);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(onSuccess).catch(()=>fallbackCopy(text, onSuccess));
+    } else {
+      fallbackCopy(text, onSuccess);
+    }
+  }
+
+  function fallbackCopy(text, cb){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); cb(); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function randomNumbers(){
+    let nums;
+    do {
+      nums = [1,2,3,4].map(() => Math.ceil(Math.random()*13));
+    } while(!findAllSolutions(nums).length);
+    nums.forEach((n,i) => document.getElementById('n'+i).value = n);
+    document.getElementById('result').innerHTML='';
+  }
+
+  function clearAll(){
+    ['n0','n1','n2','n3'].forEach(id=>{ document.getElementById(id).value=''; });
+    document.getElementById('result').innerHTML='';
+    document.getElementById('n0').focus();
+  }
+
+  let currentSolutions = [];
+
+  function solve(){
+    const nums=['n0','n1','n2','n3'].map(id=>parseFloat(document.getElementById(id).value));
+    const result=document.getElementById('result');
+    if(nums.some(n=>isNaN(n))){
+      result.innerHTML='<div class="no-solution"><strong>Missing numbers</strong>Enter all 4 numbers above.</div>';
+      return;
+    }
+    const solutions=findAllSolutions(nums);
+    solutions.sort((a,b)=>{
+      const depth=s=>{ let max=0,cur=0; for(const c of s){if(c==='('){cur++;max=Math.max(max,cur);}else if(c===')')cur--;} return max; };
+      const totalParens=s=>(s.match(/\(/g)||[]).length;
+      return depth(a)-depth(b)||totalParens(a)-totalParens(b);
+    });
+    if(!solutions.length){
+      currentSolutions=[];
+      result.innerHTML=`<div class="no-solution"><strong>No solution found</strong>The numbers ${nums.join(', ')} cannot make 24 using + − × ÷.</div>`;
+    } else {
+      const shown = showAllSolutions ? solutions : solutions.slice(0,5);
+      currentSolutions=shown;
+      const label = showAllSolutions ? `${shown.length} solution${shown.length!==1?'s':''}` : `Showing ${shown.length} of ${solutions.length} solution${solutions.length!==1?'s':''}`;
+      result.innerHTML=`
+        <div class="result-header">${label} for ${nums.join(', ')}</div>
+        ${shown.map((s,i)=>`
+          <div class="solution-item" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span>${s}</span>
+            <button id="copy-btn-${i}" onclick="copySolution(${i})" class="copy-btn">Copy</button>
+          </div>`).join('')}
+      `;
+    }
+  }
+
+  document.querySelectorAll('.num-input').forEach((inp,i)=>{
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter') solve();
+      if(e.key==='Tab'&&i<3){e.preventDefault();document.getElementById('n'+(i+1)).focus();}
+    });
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && document.activeElement.tagName !== 'INPUT') solve();
+  });
+  </script>
+</body>
+</html>
